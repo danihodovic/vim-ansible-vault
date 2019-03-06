@@ -4,10 +4,17 @@ import configparser
 
 
 def find_ansible_config_file():
-    for root, _, files in os.walk("."):
+    cfg_files = []
+    for root, _, files in os.walk(".", topdown=False):
         for f in files:
             if f == "ansible.cfg":
-                return os.path.join(root, f)
+                full_path = os.path.join(root, f)
+                distance = len(full_path.split('/'))
+                cfg_files.append({'path': full_path, 'distance': distance})
+    if cfg_files:
+        cfg_files.sort(key=lambda v: v["distance"])
+        return cfg_files[0]['path']
+
 
 
 def list_vault_identities():
