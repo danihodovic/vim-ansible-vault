@@ -1,0 +1,2 @@
+---
+my_variable: '{{ my_vault_variable }}'
