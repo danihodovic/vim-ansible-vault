@@ -14,11 +14,14 @@ def find_ansible_config_file():
     if cfg_files:
         cfg_files.sort(key=lambda v: v["distance"])
         return cfg_files[0]['path']
+    return "./"
 
 
 
 def list_vault_identities():
     config_file = find_ansible_config_file()
+    if not config_file:
+        return None
     config = configparser.ConfigParser()
     config.read(config_file)
     identity_list_line = config["defaults"]["vault_identity_list"]
@@ -33,18 +36,20 @@ def encrypt():
         print("File is already encrypted")
         return
 
+    current_buffer = vim.current.buffer.name
+
     ansible_dir = os.path.dirname(find_ansible_config_file())
-    current_buffer = vim.current.buffer.name
-
-    vault_ids = list_vault_identities()
-    vault_ids_str = ", ".join(vault_ids)
-    vault_id = vim.eval(f'input("Enter the vault-id ({vault_ids_str})> ")')
-    if vault_id not in vault_ids:
-        print(f"{vault_id} is not in {vault_ids}")
-        return
-
-    current_buffer = vim.current.buffer.name
-    cmd = f"ansible-vault encrypt --encrypt-vault-id {vault_id} {current_buffer}"
+    if ansible_dir != '.':
+        vault_ids = list_vault_identities()
+        vault_ids_str = ", ".join(vault_ids)
+        vault_id = vim.eval(f'input("Enter the vault-id ({vault_ids_str})> ")')
+        if vault_id not in vault_ids:
+            print(f"{vault_id} is not in {vault_ids}")
+            return
+        cmd = f"ansible-vault encrypt --encrypt-vault-id {vault_id} {current_buffer}"
+    else:
+        current_buffer = '\n'.join(vim.current.buffer[:])
+        cmd = f"echo '{current_buffer}' | ansible-vault encrypt --output=-"
     result = subprocess.run(
         cmd, shell=True, cwd=ansible_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -52,6 +57,7 @@ def encrypt():
     if result.returncode != 0:
         print(result.stderr)
         return
+    vim.current.buffer[:] = result.stdout.splitlines()
 
 
 def decrypt():
@@ -60,8 +66,9 @@ def decrypt():
         return
 
     ansible_dir = os.path.dirname(find_ansible_config_file())
-    current_buffer = vim.current.buffer.name
-    cmd = f"ansible-vault decrypt {current_buffer}"
+    current_buffer = '\n'.join(vim.current.buffer[:])
+    #current_buffer = vim.current.buffer.name
+    cmd = f"echo '{current_buffer}' | ansible-vault decrypt --output=-"
     result = subprocess.run(
         cmd, shell=True, cwd=ansible_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -69,7 +76,11 @@ def decrypt():
     if result.returncode != 0:
         print(f'echoerr "{result.stderr}"')
         return
+    vim.current.buffer[:] = result.stdout.splitlines()
 
 
 def is_encrypted():
-    return "$ANSIBLE_VAULT" in vim.current.buffer[0]
+    for row in vim.current.buffer[:]:
+        if "$ANSIBLE_VAULT" in row:
+            return True
+    return False
