@@ -3,7 +3,7 @@ fu! vim_ansible_vault#load()
 endfu
 
 let repo_root = expand("<sfile>:p:h:h")
-execute 'py3file ' . repo_root . '/lib/main.py'
+execute 'pyfile ' . repo_root . '/lib/main.py'
 
-command! -nargs=0 AnsibleVaultEncrypt py3 encrypt()
-command! -nargs=0 AnsibleVaultDecrypt py3 decrypt()
+command! -nargs=0 AnsibleVaultEncrypt py encrypt()
+command! -nargs=0 AnsibleVaultDecrypt py decrypt()
